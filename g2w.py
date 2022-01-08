@@ -12,6 +12,7 @@ from pptx.util import Pt
 from pptx.parts.image import Image
 from pptx.shapes.picture import Picture
 import json
+import collections
 
 splash = """
 -------------------------------------------
@@ -148,16 +149,18 @@ def create_presentations():
             credits.text = title_assets['credits']
             credits.font.size = Pt(14)
             credits.font.italic = True
-            images = []
+            images = {}
             for subdir, dirs, files in os.walk(d):
                 for filename in files:
                     filepath = subdir + os.sep + filename
                     if filepath.endswith(".png"):
-                        slide = prs.slides.add_slide(prs.slide_layouts[0])
-                        picture = slide.shapes.add_picture(filepath, 0, 0, prs.slide_width)
-                        calc_top_value = round((prs.slide_height - picture.height) / 2)
-                        picture.top = calc_top_value
-                        
+                        images[int(filename.replace('image','').replace('.png', ''))] = filepath
+            images = dict(sorted(images.items()))
+            for key, value in dict(sorted(images.items())).items():
+                    slide = prs.slides.add_slide(prs.slide_layouts[0])
+                    picture = slide.shapes.add_picture(value, 0, 0, prs.slide_width)
+                    calc_top_value = round((prs.slide_height - picture.height) / 2)
+                    picture.top = calc_top_value            
             prs.save("out/" + path + "_wide.pptx")
             bar()
     print("\n")
