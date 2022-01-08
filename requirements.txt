@@ -1,0 +1,3 @@
+python-pptx
+opencv-python
+alive-progress
