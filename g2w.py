@@ -28,19 +28,16 @@ splash = """
 """
 
 def crop_image(im):
-    img = cv2.imread(im) # Read in the image and convert to grayscale
-    img = img[40:-70,0:-1] # Perform pre-cropping
+    img = cv2.imread(im)
+    img = img[40:-70,0:-1]
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    gray = 255*(gray < 128).astype(np.uint8) # To invert the text to white
-    gray = cv2.morphologyEx(gray, cv2.MORPH_OPEN, np.ones((2, 2), dtype=np.uint8)) # Perform noise filtering
-    coords = cv2.findNonZero(gray) # Find all non-zero points (text)
-    x, y, w, h = cv2.boundingRect(coords) # Find minimum spanning bounding box
+    gray = 255*(gray < 128).astype(np.uint8)
+    gray = cv2.morphologyEx(gray, cv2.MORPH_OPEN, np.ones((2, 2), dtype=np.uint8))
+    coords = cv2.findNonZero(gray)
+    x, y, w, h = cv2.boundingRect(coords)
     w = w + x + 50
     rect = img[y:y+h, 0:w]
-    cv2.imwrite(im, rect) # Save the image
-    
-def create_powerpoint(name):
-    template = Presentation('template.pptx')
+    cv2.imwrite(im, rect)
     
 def extract_all_melodies():
     print("\n1. Extracting all melodies located in \"hymns\" folder.")
