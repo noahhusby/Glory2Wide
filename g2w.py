@@ -1,31 +1,23 @@
 import os
-import sys
 import numpy as np
 import cv2
 import shutil
 import zipfile
 from alive_progress import alive_bar
 from pptx import Presentation
-from pptx.dml.color import RGBColor
-from pptx.enum.dml import MSO_THEME_COLOR
 from pptx.util import Pt
-from pptx.parts.image import Image
 from pptx.shapes.picture import Picture
 import json
-import collections
 
 splash = """
--------------------------------------------
-   _____ _____          __
-  / ____|__ \ \        / /
- | |  __   ) \ \  /\  / / 
- | | |_ | / / \ \/  \/ /  
- | |__| |/ /_  \  /\  /   
-  \_____|____|  \/  \/    
-                          
- Glory2Wide by Noah Husby
- 
--------------------------------------------                        
+   _____ _                  _____          ___     _      
+  / ____| |                |__ \ \        / (_)   | |     
+ | |  __| | ___  _ __ _   _   ) \ \  /\  / / _  __| | ___ 
+ | | |_ | |/ _ \| '__| | | | / / \ \/  \/ / | |/ _` |/ _ \
+ | |__| | | (_) | |  | |_| |/ /_  \  /\  /  | | (_| |  __/
+  \_____|_|\___/|_|   \__, |____|  \/  \/   |_|\__,_|\___|
+                       __/ |                              
+                      |___/                                                   
 """
 
 def crop_image(im):
@@ -55,34 +47,9 @@ def extract_all_melodies():
                 zip_ref.extractall("temp/" + key.replace('.ppt', ''))
                 bar()
     print("\n")
-                
-def clean_up_melodies():
-    print("2. Cleaning up melody extractions.")
-    temp = []
-    for path in os.listdir("temp"):
-        temp.append(path)
-        
-    with alive_bar(len(temp)) as bar:
-        for path in temp:
-            d = "temp/" + path
-            os.remove(d + "/[Content_Types].xml")
-            shutil.rmtree(d + "/_rels")
-            shutil.rmtree(d + "/docProps")
-            shutil.rmtree(d + "/ppt/_rels")
-            shutil.rmtree(d + "/ppt/notesMasters")
-            shutil.rmtree(d + "/ppt/slideLayouts")
-            shutil.rmtree(d + "/ppt/slideMasters")
-            shutil.rmtree(d + "/ppt/theme")
-            shutil.rmtree(d + "/ppt/slides")
-            os.remove(d + "/ppt/presentation.xml")
-            os.remove(d + "/ppt/presProps.xml")
-            os.remove(d + "/ppt/tableStyles.xml")
-            os.remove(d + "/ppt/viewProps.xml")
-            bar()
-    print("\n")
     
 def generate_title_slide_information():
-    print("3. Generating title slide information.")
+    print("2. Generating title slide information.")
     melodies = {}
     for subdir, dirs, files in os.walk(r'hymns'):
         for filename in files:
@@ -110,7 +77,7 @@ def generate_title_slide_information():
     print("\n")
     
 def crop_images():
-    print("4. Cropping melody images.")
+    print("3. Cropping melody images.")
     images = []
     for subdir, dirs, files in os.walk(r'temp'):
         for filename in files:
@@ -125,7 +92,7 @@ def crop_images():
     print("\n")
 
 def create_presentations():
-    print("5. Generating final hymns.")
+    print("4. Generating final hymns.")
     temp = []
     for path in os.listdir("temp"):
         temp.append(path)
@@ -165,18 +132,6 @@ def create_presentations():
             bar()
     print("\n")
     
-def clean_up():
-    print("6. Cleaning up.")
-    temp = []
-    for path in os.listdir("temp"):
-        temp.append(path)
-        
-    with alive_bar(len(temp)) as bar:
-        for path in temp:
-            shutil.rmtree("temp/" + path)
-            bar()
-    print("\n")
-    
 if __name__ == "__main__":
     print(splash)
     if os.path.isdir("temp"):
@@ -188,10 +143,9 @@ if __name__ == "__main__":
         print("Please extract the Glory to God hymn pack into the \"hymns\" directory")
         quit()
     extract_all_melodies()
-    clean_up_melodies()
     generate_title_slide_information()
     crop_images()
     create_presentations()
-    clean_up()
+    shutil.rmtree("temp")
     print("Successfully converted hymns to wide format.\nThe exported hymns are in the \"out\" folder.")
     
