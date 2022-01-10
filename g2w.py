@@ -9,17 +9,6 @@ from pptx.util import Pt
 from pptx.shapes.picture import Picture
 import json
 
-splash = """
-   _____ _                  _____          ___     _      
-  / ____| |                |__ \ \        / (_)   | |     
- | |  __| | ___  _ __ _   _   ) \ \  /\  / / _  __| | ___ 
- | | |_ | |/ _ \| '__| | | | / / \ \/  \/ / | |/ _` |/ _ \
- | |__| | | (_) | |  | |_| |/ /_  \  /\  /  | | (_| |  __/
-  \_____|_|\___/|_|   \__, |____|  \/  \/   |_|\__,_|\___|
-                       __/ |                              
-                      |___/                                                   
-"""
-
 def crop_image(im):
     img = cv2.imread(im)
     img = img[40:-70,0:-1]
@@ -28,7 +17,7 @@ def crop_image(im):
     gray = cv2.morphologyEx(gray, cv2.MORPH_OPEN, np.ones((2, 2), dtype=np.uint8))
     coords = cv2.findNonZero(gray)
     x, y, w, h = cv2.boundingRect(coords)
-    w = w + x + 50
+    w = w + x + 100
     rect = img[y:y+h, 0:w]
     cv2.imwrite(im, rect)
     
@@ -132,8 +121,21 @@ def create_presentations():
             bar()
     print("\n")
     
+def clean_up():
+    print("5. Cleaning up.")
+    temp = []
+    for path in os.listdir("temp"):
+        temp.append(path)
+        
+    with alive_bar(len(temp)) as bar:
+        for path in temp:
+            shutil.rmtree("temp/" + path)
+            bar()
+    shutil.rmtree("temp")
+    print("\n")
+    
 if __name__ == "__main__":
-    print(splash)
+    print("\nGlory2Wide by Noah Husby")
     if os.path.isdir("temp"):
         shutil.rmtree("temp")
     if os.path.isdir("out") is False:
@@ -146,6 +148,7 @@ if __name__ == "__main__":
     generate_title_slide_information()
     crop_images()
     create_presentations()
-    shutil.rmtree("temp")
-    print("Successfully converted hymns to wide format.\nThe exported hymns are in the \"out\" folder.")
+    clean_up()
+    print("Successfully converted hymns to wide format.\nThe exported hymns are in the \"out\" folder.\n")
+
     
