@@ -1,7 +1,7 @@
 # Glory2Wide
 A simple script to reformat ancient music slides into a wide format
 
-[![asciicast](https://asciinema.org/a/460689.svg)](https://asciinema.org/a/460689)
+[![asciicast](https://asciinema.org/a/462661.svg)](https://asciinema.org/a/462661)
 
 ### Running the script
 * Run `git clone https://github.com/noahhusby/Glory2Wide.git`

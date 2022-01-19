@@ -7,7 +7,11 @@ from alive_progress import alive_bar
 from pptx import Presentation
 from pptx.util import Pt
 from pptx.shapes.picture import Picture
+from pptx.enum.text import PP_ALIGN
+from pptx.enum.text import MSO_ANCHOR
 import json
+from PIL import Image
+import io
 
 def crop_image(im):
     img = cv2.imread(im)
@@ -21,24 +25,10 @@ def crop_image(im):
     rect = img[y:y+h, 0:w]
     cv2.imwrite(im, rect)
     
-def extract_all_melodies():
-    print("\n1. Extracting all melodies located in \"hymns\" folder.")
-    melodies = {}
-    for subdir, dirs, files in os.walk(r'hymns'):
-        for filename in files:
-            filepath = subdir + os.sep + filename
-            if filepath.endswith(".ppt") and "Melody" in filepath:
-                melodies[filename] = filepath
-                    
-    with alive_bar(len(melodies)) as bar:
-        for key, value in melodies.items():
-            with zipfile.ZipFile(value,"r") as zip_ref:
-                zip_ref.extractall("temp/" + key.replace('.ppt', ''))
-                bar()
-    print("\n")
-    
-def generate_title_slide_information():
-    print("2. Generating title slide information.")
+def generate_metadata():
+    print("1. Extracting images and generating metadata.")
+    os.mkdir("temp")
+    # Find all melodies in /hymn folder
     melodies = {}
     for subdir, dirs, files in os.walk(r'hymns'):
         for filename in files:
@@ -49,24 +39,34 @@ def generate_title_slide_information():
     with alive_bar(len(melodies)) as bar:
         for key, value in melodies.items():
             d = "temp/" + key
+            os.mkdir(d)
+            os.mkdir(d + "/images")
+            # Fetch title slide information from powerpoint
             prs = Presentation(value)
             shapes = prs.slides[0].shapes
+            firstSlide = 0
             if len(shapes) < 2:
                 shapes = prs.slides[1].shapes
+                firstSlide = 1
             hymn_name = shapes[0].text
             hymn_number = shapes[1].text
             hymn_credits = shapes[2].text
             data = {}
-            data['name'] = hymn_name
-            data['number'] = hymn_number
-            data['credits'] = hymn_credits
-            with open(d + "/title.json", 'w') as outfile:
+            data['name'] = hymn_name.strip()
+            data['number'] = hymn_number.strip()
+            data['credits'] = hymn_credits.strip()
+            # Export images from each slide
+            for x in range(firstSlide + 1, len(prs.slides)):
+                f = open(d + "/images/" + str(x - firstSlide) + ".png", "wb")
+                f.write(prs.slides[x].shapes[0].image.blob)
+                f.close()
+            with open(d + "/metadata.json", 'w') as outfile:
                 json.dump(data, outfile)
             bar()
     print("\n")
     
 def crop_images():
-    print("3. Cropping melody images.")
+    print("2. Cropping melody images.")
     images = []
     for subdir, dirs, files in os.walk(r'temp'):
         for filename in files:
@@ -81,48 +81,69 @@ def crop_images():
     print("\n")
 
 def create_presentations():
-    print("4. Generating final hymns.")
+    print("3. Generating final hymns.")
     temp = []
     for path in os.listdir("temp"):
         temp.append(path)
         
     with alive_bar(len(temp)) as bar:
         for path in temp:
+            bar.text(path + " (Title Slide)")
             d = "temp/" + path
-            prs = Presentation("template.pptx")
-            shapes = prs.slides[0].shapes
-            with open(d + "/title.json", 'r') as f:
+            prs = Presentation()
+            # Configure as 16:9 Aspect Ratio
+            prs.slide_height = 6858000
+            prs.slide_width = 12192000
+            shapes = prs.slides.add_slide(prs.slide_layouts[6]).shapes
+            with open(d + "/metadata.json", 'r') as f:
                 title_assets =  json.loads(f.read())
-            name = shapes[0].text_frame.paragraphs[0]
+            # Generate title textbox
+            name_frame = shapes.add_textbox(914400, 2130426, 10363200, 1470525).text_frame
+            name_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+            name = name_frame.paragraphs[0]
             name.text = title_assets['name']
             name.font.size = Pt(60)
             name.font.bold = True
-            number = shapes[1].text_frame.paragraphs[0]
+            name.alignment = PP_ALIGN.CENTER
+            name_frame.fit_text('Calibri', 60, True)
+            # Generate GTG number textbox
+            number_frame = shapes.add_textbox(2341418, 6928, 7772400, 735013).text_frame
+            number_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+            number = number_frame.paragraphs[0]
             number.text = title_assets['number']
             number.font.size = Pt(30)
             number.font.italic = True
-            credits = shapes[2].text_frame.paragraphs[0]
+            number.alignment = PP_ALIGN.CENTER
+            # Generate credits textbox
+            credits_frame = shapes.add_textbox(1513609, 5688449, 9164782, 1169551).text_frame
+            credits_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+            credits = credits_frame.paragraphs[0]
             credits.text = title_assets['credits']
             credits.font.size = Pt(14)
             credits.font.italic = True
+            credits.alignment = PP_ALIGN.CENTER
+            credits_frame.fit_text('Calibri', 14)
+            # Generate image slides
             images = {}
+            bar.text(path + " (Images)")                    
             for subdir, dirs, files in os.walk(d):
                 for filename in files:
                     filepath = subdir + os.sep + filename
                     if filepath.endswith(".png"):
-                        images[int(filename.replace('image','').replace('.png', ''))] = filepath
+                        images[int(filename.replace('.png', ''))] = filepath
+            # Sort images by number
             images = dict(sorted(images.items()))
             for key, value in dict(sorted(images.items())).items():
                     slide = prs.slides.add_slide(prs.slide_layouts[0])
                     picture = slide.shapes.add_picture(value, 0, 0, prs.slide_width)
                     calc_top_value = round((prs.slide_height - picture.height) / 2)
-                    picture.top = calc_top_value            
+                    picture.top = calc_top_value         
             prs.save("out/" + path + "_wide.pptx")
             bar()
     print("\n")
     
 def clean_up():
-    print("5. Cleaning up.")
+    print("4. Cleaning up.")
     temp = []
     for path in os.listdir("temp"):
         temp.append(path)
@@ -135,7 +156,7 @@ def clean_up():
     print("\n")
     
 if __name__ == "__main__":
-    print("\nGlory2Wide by Noah Husby")
+    print("\nGlory2Wide by Noah Husby\n")
     if os.path.isdir("temp"):
         shutil.rmtree("temp")
     if os.path.isdir("out") is False:
@@ -144,8 +165,7 @@ if __name__ == "__main__":
         os.mkdir("hymns")
         print("Please extract the Glory to God hymn pack into the \"hymns\" directory")
         quit()
-    extract_all_melodies()
-    generate_title_slide_information()
+    generate_metadata()
     crop_images()
     create_presentations()
     clean_up()
